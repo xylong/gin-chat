@@ -2,6 +2,7 @@ package router
 
 import (
 	"gin-chat/api"
+	"gin-chat/service"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -18,6 +19,8 @@ func NewRouter() *gin.Engine {
 		})
 
 		v1.POST("users", api.Register)
+
+		v1.GET("ws", service.Handler)
 	}
 
 	return r
