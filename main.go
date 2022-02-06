@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"gin-chat/cache"
 	"gin-chat/conf"
+	"gin-chat/router"
 )
 
 func main() {
 	conf.Init()
-	fmt.Println(conf.ServiceConfig, conf.MysqlConfig, conf.MongoConfig)
 	cache.Redis()
+
+	r := router.NewRouter()
+	r.Run(fmt.Sprintf(":%d", conf.ServiceConfig.HttpPort))
 }
