@@ -1,7 +1,12 @@
 package conf
 
 import (
+	"context"
+	"fmt"
+	"gin-chat/model"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"gopkg.in/ini.v1"
 	"log"
 	"os"
@@ -26,23 +31,6 @@ type serviceConfig struct {
 	HttpPort int
 }
 
-// mysqlConfig 数据库配置
-type mysqlConfig struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
-	Database string
-}
-
-// mongoConfig mongo数据库配置
-type mongoConfig struct {
-	Host     string
-	Port     int
-	Password string
-	Database string
-}
-
 func Init() {
 	file, err := ini.Load("config.ini")
 	if err != nil {
@@ -53,6 +41,15 @@ func Init() {
 	loadServer(file)
 	loadMysql(file)
 	loadMongo(file)
+
+	Mongo()
+	model.Database(fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		MysqlConfig.User,
+		MysqlConfig.Password,
+		MysqlConfig.Host,
+		MysqlConfig.Port,
+		MysqlConfig.Database,
+	))
 }
 
 func loadServer(file *ini.File) {
@@ -64,6 +61,15 @@ func loadServer(file *ini.File) {
 		log.Println(err)
 	}
 	ServiceConfig.HttpPort = port
+}
+
+// mysqlConfig 数据库配置
+type mysqlConfig struct {
+	Host     string
+	Port     int
+	User     string
+	Password string
+	Database string
 }
 
 func loadMysql(file *ini.File) {
@@ -80,6 +86,14 @@ func loadMysql(file *ini.File) {
 	MysqlConfig.Port = port
 }
 
+// mongoConfig mongo数据库配置
+type mongoConfig struct {
+	Host     string
+	Port     int
+	Password string
+	Database string
+}
+
 func loadMongo(file *ini.File) {
 	section := file.Section("mongo")
 	MongoConfig.Host = section.Key("host").String()
@@ -91,4 +105,16 @@ func loadMongo(file *ini.File) {
 		log.Println(err)
 	}
 	MongoConfig.Port = port
+}
+
+func Mongo() {
+	var err error
+	clientOptions := options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%d", MongoConfig.Host, MongoConfig.Port))
+	MongoClient, err = mongo.Connect(context.TODO(), clientOptions)
+	if err != nil {
+		logrus.Info(err)
+		panic(err)
+	}
+
+	logrus.Info("mongodb connected.")
 }
