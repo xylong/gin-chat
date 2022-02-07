@@ -88,6 +88,7 @@ func loadMysql(file *ini.File) {
 
 // mongoConfig mongo数据库配置
 type mongoConfig struct {
+	User     string
 	Host     string
 	Port     int
 	Password string
@@ -97,8 +98,9 @@ type mongoConfig struct {
 func loadMongo(file *ini.File) {
 	section := file.Section("mongo")
 	MongoConfig.Host = section.Key("host").String()
+	MongoConfig.User = section.Key("user").String()
 	MongoConfig.Password = section.Key("password").String()
-	MysqlConfig.Database = section.Key("database").String()
+	MongoConfig.Database = section.Key("database").String()
 
 	port, err := section.Key("port").Int()
 	if err != nil {
@@ -109,7 +111,12 @@ func loadMongo(file *ini.File) {
 
 func Mongo() {
 	var err error
-	clientOptions := options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%d", MongoConfig.Host, MongoConfig.Port))
+	//mongodb://<dbuser>:<dbpassword>@ds041154.mongolab.com:41154/location
+	clientOptions := options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%s@%s:%d",
+		MongoConfig.User,
+		MongoConfig.Password,
+		MongoConfig.Host,
+		MongoConfig.Port))
 	MongoClient, err = mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
 		logrus.Info(err)

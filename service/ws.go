@@ -4,11 +4,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"gin-chat/cache"
+	"gin-chat/conf"
 	"gin-chat/pkg/e"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"
+)
+
+const (
+	// 未读
+	unread = iota
+	// 已读
+	read
 )
 
 var (
@@ -49,7 +58,7 @@ func (c *Client) Read() {
 	// 下线
 	defer func() {
 		Manager.UnRegister <- c
-		c.Socket.Close()
+		_ = c.Socket.Close()
 	}()
 
 	for {
@@ -133,6 +142,7 @@ type ClientManager struct {
 func (cm *ClientManager) Start() {
 	for {
 		select {
+
 		case conn := <-Manager.Register:
 			fmt.Printf("新连接：%v", conn.ID)
 			Manager.Clients[conn.ID] = conn // 新连接加入用户管理
@@ -143,6 +153,63 @@ func (cm *ClientManager) Start() {
 			}
 			msg, _ := json.Marshal(replyMsg)
 			_ = conn.Socket.WriteMessage(websocket.TextMessage, msg)
+
+		case conn := <-Manager.UnRegister:
+			fmt.Printf("连接断开：%v", conn.ID)
+
+			if _, ok := Manager.Clients[conn.ID]; ok {
+				replyMsg := &ReplyMsg{
+					Code:    int(e.WsRecord),
+					Content: "连接中断",
+				}
+				msg, _ := json.Marshal(replyMsg)
+				_ = conn.Socket.WriteMessage(websocket.TextMessage, msg)
+				close(conn.Send)
+				delete(Manager.Clients, conn.ID)
+			}
+
+		case broadcast := <-Manager.Broadcast:
+			message := broadcast.Message
+			sendId := broadcast.Client.SendID
+			flag := false // 默认对方不在线
+			for id, conn := range Manager.Clients {
+				if id != sendId {
+					continue
+				}
+				select {
+				case conn.Send <- message:
+					flag = true
+				default:
+					close(conn.Send)
+					delete(Manager.Clients, conn.ID)
+				}
+			}
+			id := broadcast.Client.ID
+			if flag {
+				logrus.Info("对方在线应答")
+				replyMsg := &ReplyMsg{
+					Code:    int(e.WsOnlineReply),
+					Content: "对方在线应答",
+				}
+				msg, err := json.Marshal(replyMsg)
+				_ = broadcast.Client.Socket.WriteMessage(websocket.TextMessage, msg)
+
+				if err = InsertMsg(conf.MongoConfig.Database, id, string(message), read, int64(time.Hour)); err != nil {
+					logrus.Info("[InsertMsg] ", err)
+				}
+			} else {
+				logrus.Info("对方不在线")
+				replyMsg := ReplyMsg{
+					Code:    int(e.WsOfflineReply),
+					Content: e.WsOfflineReply.String(),
+				}
+				msg, err := json.Marshal(replyMsg)
+				_ = broadcast.Client.Socket.WriteMessage(websocket.TextMessage, msg)
+
+				if err = InsertMsg(conf.MongoConfig.Database, id, string(message), unread, int64(time.Hour)); err != nil {
+					logrus.Info("[InsertMsg] ", err)
+				}
+			}
 		}
 	}
 }
