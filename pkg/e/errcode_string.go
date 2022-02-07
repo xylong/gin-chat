@@ -9,30 +9,20 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[OK-0]
-	_ = x[WsParseMsg-10001]
-	_ = x[WsRecord-10002]
-	_ = x[WsRecordEnd-10003]
-	_ = x[WsOnlineReply-10004]
-	_ = x[WsOfflineReply-10004]
-	_ = x[WsMsgLimit-10005]
+	_ = x[WsUpgrade-10001]
 }
 
 const (
 	_ErrCode_name_0 = "成功"
-	_ErrCode_name_1 = "解析内容信息发送信息，请求历史记录没有更多记录了在线应答成功请求受到限制"
-)
-
-var (
-	_ErrCode_index_1 = [...]uint8{0, 18, 51, 72, 90, 108}
+	_ErrCode_name_1 = "协议升级失败"
 )
 
 func (i ErrCode) String() string {
 	switch {
 	case i == 0:
 		return _ErrCode_name_0
-	case 10001 <= i && i <= 10005:
-		i -= 10001
-		return _ErrCode_name_1[_ErrCode_index_1[i]:_ErrCode_index_1[i+1]]
+	case i == 10001:
+		return _ErrCode_name_1
 	default:
 		return "ErrCode(" + strconv.FormatInt(int64(i), 10) + ")"
 	}

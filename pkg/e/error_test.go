@@ -1,9 +1,7 @@
 package e
 
-import (
-	"testing"
-)
+import "testing"
 
-func TestCustomError_Error(t *testing.T) {
-	t.Log(NewCustomError(WsParseMsg), WsOfflineReply.String())
+func TestErrCode_String(t *testing.T) {
+	t.Log(OK.String(), WsUpgrade.String())
 }

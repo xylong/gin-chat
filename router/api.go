@@ -20,7 +20,7 @@ func NewRouter() *gin.Engine {
 
 		v1.POST("users", api.Register)
 
-		v1.GET("ws", ws.Http2Ws)
+		v1.GET("im", ws.Http2Ws)
 	}
 
 	return r
