@@ -4,7 +4,6 @@ import (
 	"gin-chat/api"
 	"gin-chat/service/ws"
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 // NewRouter 创建路由
@@ -14,10 +13,6 @@ func NewRouter() *gin.Engine {
 
 	v1 := r.Group("v1")
 	{
-		v1.GET("ping", func(context *gin.Context) {
-			context.String(http.StatusOK, "pong")
-		})
-
 		v1.POST("users", api.Register)
 
 		v1.GET("im", ws.Ws)

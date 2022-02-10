@@ -14,9 +14,10 @@ func Ws(ctx *gin.Context) {
 		return
 	}
 
-	Clients.Store(conn.RemoteAddr().String(), conn)
+	Clients.Store(conn)
 }
 
+// All 向所有客户端发消息
 func All(ctx *gin.Context) {
 	content := ctx.PostForm("content")
 	Clients.Send2All(content)
