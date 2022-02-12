@@ -22,3 +22,16 @@ func All(ctx *gin.Context) {
 	content := ctx.PostForm("content")
 	Clients.Send2All(content)
 }
+
+func Json(ctx *gin.Context) {
+	Clients.data.Range(func(key, value interface{}) bool {
+		_ = value.(*Client).conn.WriteJSON([]struct {
+			ID   int    `json:"id"`
+			Name string `json:"name"`
+		}{
+			{1, "apple"},
+			{2, "banana"},
+		})
+		return true
+	})
+}

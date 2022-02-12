@@ -17,6 +17,7 @@ func NewRouter() *gin.Engine {
 
 		v1.GET("im", ws.Ws)
 		v1.POST("all", ws.All)
+		v1.GET("json", ws.Json)
 	}
 
 	return r
