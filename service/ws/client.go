@@ -124,9 +124,19 @@ loop:
 			// todo 区分聊天消息和指令
 			logrus.Info("[read]" + string(msg.Data))
 
-			rsp, err := msg.parseToCommand()
+			cmd, err := msg.parseToCommand()
 			if err != nil {
 				logrus.Error(err)
+				break
+			}
+			if cmd.Type == ClientPing {
+				c.last = time.Now().Unix()
+			}
+
+			rsp, err := cmd.Parse()
+			if err != nil {
+				logrus.Info(err)
+				break
 			}
 
 			if rsp != nil {
