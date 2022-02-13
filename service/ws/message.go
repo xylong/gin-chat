@@ -2,6 +2,7 @@ package ws
 
 import (
 	"encoding/json"
+	"gin-chat/model"
 )
 
 // Message 消息
@@ -15,10 +16,10 @@ func NewMessage(msgType int, data []byte) *Message {
 }
 
 // parseToCommand 将json消息解析未Command
-func (message *Message) parseToCommand() error {
+func (message *Message) parseToCommand() (*model.Response, error) {
 	cmd := &Command{}
 	if err := json.Unmarshal(message.Data, cmd); err != nil {
-		return err
+		return nil, err
 	}
 
 	return cmd.Parse()

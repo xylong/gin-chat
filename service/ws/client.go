@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"gin-chat/model"
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 	"sync"
@@ -30,9 +31,10 @@ func (c *ClientMap) Store(conn *websocket.Conn) {
 	client := NewClient(conn)
 	c.data.Store(conn.RemoteAddr().String(), client)
 
-	go client.heartbeat(time.Minute * 1)
-	go client.handler() // 总控制循环
-	go client.read()    // 读消息循环
+	go client.heartbeat(time.Minute * 1) // 心跳检测
+	go client.handler()                  // 总控制循环
+	go client.read()                     // 读循环
+	go client.write()                    // 写循环
 }
 
 // Send2All 向所有客户端发消息
@@ -55,7 +57,8 @@ func (c *ClientMap) Destroy(conn *websocket.Conn) {
 // Client 客户端
 type Client struct {
 	conn      *websocket.Conn
-	readChan  chan *Message // 读队列
+	readChan  chan *Message        // 读队列
+	writeChan chan *model.Response // 写队列
 	closeChan chan struct{}
 	last      int64 // 最后发送消息的时间
 }
@@ -64,7 +67,8 @@ type Client struct {
 func NewClient(conn *websocket.Conn) *Client {
 	return &Client{
 		conn:      conn,
-		readChan:  make(chan *Message, 10),
+		readChan:  make(chan *Message, 1),
+		writeChan: make(chan *model.Response, 1),
 		closeChan: make(chan struct{}),
 		last:      time.Now().Unix(),
 	}
@@ -72,13 +76,12 @@ func NewClient(conn *websocket.Conn) *Client {
 
 // heartbeat 心跳检测
 func (c *Client) heartbeat(duration time.Duration) {
-	defer destroyClient(c)
-
 	// 定时检测客户端连接状态
 	for {
 		time.Sleep(duration)
 		// 100s没有提交信息就销毁客户端
 		if time.Now().Unix()-c.last > 100 {
+			c.closeChan <- struct{}{}
 			break
 		}
 	}
@@ -86,29 +89,50 @@ func (c *Client) heartbeat(duration time.Duration) {
 
 // 循环读消息
 func (c *Client) read() {
-	defer destroyClient(c)
-
-loop:
 	for {
 		t, p, err := c.conn.ReadMessage()
 		if err != nil {
-			break loop
+			c.closeChan <- struct{}{}
+			break
 		}
 
 		c.readChan <- NewMessage(t, p)
 	}
 }
 
+func (c *Client) write() {
+loop:
+	for {
+		select {
+		case msg := <-c.writeChan:
+			if err := c.conn.WriteMessage(websocket.TextMessage, msg.Json()); err != nil {
+				c.closeChan <- struct{}{}
+				break loop
+			}
+		}
+	}
+}
+
 // handler 消息处理
 func (c *Client) handler() {
+	defer destroyClient(c)
+
 loop:
 	for {
 		select {
 		case msg := <-c.readChan:
-			logrus.Info(string(msg.Data))
-			if err := msg.parseToCommand(); err != nil {
+			// todo 区分聊天消息和指令
+			logrus.Info("[read]" + string(msg.Data))
+
+			rsp, err := msg.parseToCommand()
+			if err != nil {
 				logrus.Error(err)
 			}
+
+			if rsp != nil {
+				c.writeChan <- rsp
+			}
+
 		case <-c.closeChan:
 			break loop
 		}
