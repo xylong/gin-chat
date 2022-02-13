@@ -21,6 +21,6 @@ func MockPodList() []*Pod {
 // ParseAction 解析行为
 // 从消息中解析出执行方法
 func (p *Pod) ParseAction(action string) error {
-	fmt.Println("xxoo", action, p.Name, p.Image, p.Node)
+	fmt.Println(action, p.Name, p.Image, p.Node)
 	return nil
 }

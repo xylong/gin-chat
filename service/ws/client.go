@@ -106,6 +106,9 @@ loop:
 		select {
 		case msg := <-c.readChan:
 			logrus.Info(string(msg.Data))
+			if err := msg.parseToCommand(); err != nil {
+				logrus.Error(err)
+			}
 		case <-c.closeChan:
 			break loop
 		}

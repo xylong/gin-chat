@@ -1,6 +1,8 @@
 package ws
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 // Message 消息
 type Message struct {
@@ -12,7 +14,7 @@ func NewMessage(msgType int, data []byte) *Message {
 	return &Message{Type: msgType, Data: data}
 }
 
-// parseToCommand 将消息解析成命令
+// parseToCommand 将json消息解析未Command
 func (message *Message) parseToCommand() error {
 	cmd := &Command{}
 	if err := json.Unmarshal(message.Data, cmd); err != nil {

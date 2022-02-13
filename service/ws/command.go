@@ -22,8 +22,8 @@ func init() {
 // Command 消息命令
 type Command struct {
 	Type   int
-	Data   map[string]interface{}
 	Action string
+	Data   map[string]interface{}
 }
 
 // Parse 执行解析
